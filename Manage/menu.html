@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fresh Veggie Order</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--green:#2e7d32;--green-light:#e8f5e9;--green-dark:#1b5e20;--orange:#f57c00;--red:#d32f2f;--gray:#757575;--gray-light:#f5f5f5;--gray-border:#e0e0e0;--white:#ffffff;--text:#212121;--text-light:#616161;--shadow:0 2px 8px rgba(0,0,0,0.1)}
+html{font-size:20px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--text);background:var(--gray-light);line-height:1.5;min-height:100vh}
+.container{max-width:600px;margin:0 auto;padding:0 12px;padding-bottom:100px}
+h1{font-size:1.6rem;font-weight:700}
+h2{font-size:1.3rem;font-weight:700}
+h3{font-size:1.1rem;font-weight:600}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:14px 24px;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:background .2s,transform .1s;text-decoration:none;gap:8px;width:100%}
+.btn:active{transform:scale(0.97)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:var(--green-dark)}
+.btn-white{background:#fff;color:var(--green);border:2px solid var(--green)}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-gray{background:#e0e0e0;color:var(--text)}
+.btn-sm{min-height:44px;padding:10px 16px;font-size:0.9rem}
+.btn-icon{width:52px;height:52px;min-height:52px;padding:0;border-radius:50%;font-size:1.4rem}
+
+/* Header */
+.header{background:var(--green);color:#fff;padding:16px 0;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.header-inner{max-width:600px;margin:0 auto;padding:0 16px;display:flex;align-items:center;justify-content:space-between}
+.header h1{color:#fff;font-size:1.3rem}
+.back-btn{background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;padding:8px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
+.cart-badge{position:relative}
+.cart-badge .count{position:absolute;top:-6px;right:-6px;background:var(--orange);color:#fff;border-radius:50%;width:24px;height:24px;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* Cards */
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+
+/* Category */
+.category-title{background:var(--green-light);color:var(--green-dark);padding:10px 16px;border-radius:10px;font-weight:700;font-size:1.1rem;margin:16px 0 8px}
+
+/* Item Row */
+.item-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--gray-border)}
+.item-row:last-child{border-bottom:none}
+.item-info{flex:1;min-width:0}
+.item-name{font-weight:600;font-size:1.05rem}
+.item-price{color:var(--green);font-weight:700}
+.item-avail{color:var(--gray);font-size:0.8rem}
+.qty-controls{display:flex;align-items:center;gap:8px}
+.qty-display{font-size:1.2rem;font-weight:700;min-width:40px;text-align:center}
+
+/* Form */
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-weight:600;margin-bottom:6px;font-size:0.95rem}
+.input{width:100%;padding:14px 16px;border:2px solid var(--gray-border);border-radius:10px;font-size:1rem;transition:border-color .2s;background:#fff}
+.input:focus{outline:none;border-color:var(--green)}
+select.input{appearance:auto}
+
+/* Bill */
+.bill{background:#fff;border:2px solid var(--green);border-radius:12px;padding:20px;margin:16px 0}
+.bill-header{text-align:center;border-bottom:2px dashed var(--gray-border);padding-bottom:12px;margin-bottom:12px}
+.bill-row{display:flex;justify-content:space-between;padding:6px 0;font-size:0.95rem}
+.bill-row.total{font-size:1.2rem;font-weight:700;border-top:2px solid var(--text);padding-top:12px;margin-top:8px}
+.bill-footer{text-align:center;border-top:2px dashed var(--gray-border);padding-top:12px;margin-top:12px;color:var(--gray)}
+
+/* Bottom Nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;box-shadow:0 -2px 10px rgba(0,0,0,0.1);padding:8px 16px;z-index:100;display:flex;gap:8px;justify-content:center}
+.bottom-nav .btn{flex:1;max-width:300px}
+
+/* Tab bar */
+.tabs{display:flex;background:#fff;border-radius:12px;padding:4px;margin:16px 0;box-shadow:var(--shadow)}
+.tab{flex:1;padding:12px;text-align:center;border:none;background:none;font-size:0.9rem;font-weight:600;cursor:pointer;border-radius:10px;color:var(--gray);transition:all .2s}
+.tab.active{background:var(--green);color:#fff}
+
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto}
+.modal h2{margin-bottom:16px}
+
+/* Status */
+.status-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:700}
+.status-paid{background:#e8f5e9;color:#2e7d32}
+.status-unpaid{background:#fff3e0;color:#e65100}
+.status-pending{background:#e3f2fd;color:#1565c0}
+.status-confirmed{background:#e8f5e9;color:#2e7d32}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.3s ease}
+
+/* Utility */
+.text-center{text-align:center}
+.text-green{color:var(--green)}
+.text-red{color:var(--red)}
+.text-gray{color:var(--gray)}
+.mb-8{margin-bottom:8px}
+.mb-16{margin-bottom:16px}
+.mt-16{margin-top:16px}
+.flex{display:flex}
+.gap-8{gap:8px}
+.gap-16{gap:16px}
+.space-between{justify-content:space-between}
+.items-center{align-items:center}
+.hidden{display:none}
+
+/* Whatsapp */
+.wa-btn{background:#25D366;color:#fff}
+.wa-btn:hover{background:#128C7E}
+
+/* Print */
+@media print{
+  .header,.bottom-nav,.no-print{display:none !important}
+  body{background:#fff}
+  .bill{border:1px solid #000}
+}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// ============ CONFIGURATION ============
+// Set these ONCE before sharing the file with customers.
+// These are embedded in the file and used by all customers.
+const CONFIG = {
+  SHEET_URL: 'https://script.google.com/macros/s/AKfycbxt_-eiHxBeSJmmekAuDaQIXwilrgF9PRT6wbNnhC5reH5Y3D7fi5jCPuG5sCmUURA9/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
+  SHEET_TOKEN: 'mango2026',       // Must match SECRET_TOKEN in your Apps Script, e.g. 'mango2026'
+  VENDOR_NAME: 'Fresh Veggie Farm',
+  VENDOR_PHONE: '',      // With country code, e.g. '919876543210'
+  UPI_ID: '',            // e.g. 'name@upi'
+  WELCOME_MSG: 'Welcome! Order fresh vegetables for the week.',
+  ADMIN_ENABLED: true   // Set to true ONLY on YOUR copy. Customers get false.
+};
+
+// ============ DATA LAYER ============
+const STORAGE_KEYS = {
+  menu: 'veggie_menu',
+  orders: 'veggie_orders',
+  settings: 'veggie_settings'
+};
+
+const DEFAULT_SETTINGS = {
+  vendorName: CONFIG.VENDOR_NAME,
+  vendorPhone: CONFIG.VENDOR_PHONE,
+  upiId: CONFIG.UPI_ID,
+  pin: '6546',
+  welcomeMessage: CONFIG.WELCOME_MSG,
+  sheetUrl: CONFIG.SHEET_URL,
+  sheetToken: CONFIG.SHEET_TOKEN
+};
+
+const DEFAULT_MENU = [
+  {id:1,name:'Spinach (Palak)',price:30,unit:'bunch',available:50,category:'Leafy Greens'},
+  {id:2,name:'Methi (Fenugreek)',price:25,unit:'bunch',available:40,category:'Leafy Greens'},
+  {id:3,name:'Coriander (Dhaniya)',price:15,unit:'bunch',available:60,category:'Leafy Greens'},
+  {id:4,name:'Mint (Pudina)',price:10,unit:'bunch',available:30,category:'Leafy Greens'},
+  {id:5,name:'Potato (Aloo)',price:35,unit:'kg',available:100,category:'Root Vegetables'},
+  {id:6,name:'Onion (Pyaaz)',price:40,unit:'kg',available:100,category:'Root Vegetables'},
+  {id:7,name:'Carrot (Gajar)',price:50,unit:'kg',available:60,category:'Root Vegetables'},
+  {id:8,name:'Beetroot (Chukandar)',price:40,unit:'kg',available:40,category:'Root Vegetables'},
+  {id:9,name:'Bottle Gourd (Lauki)',price:30,unit:'piece',available:30,category:'Gourds'},
+  {id:10,name:'Bitter Gourd (Karela)',price:45,unit:'kg',available:25,category:'Gourds'},
+  {id:11,name:'Ridge Gourd (Tori)',price:35,unit:'kg',available:30,category:'Gourds'},
+  {id:12,name:'Tomato (Tamatar)',price:35,unit:'kg',available:80,category:'Others'},
+  {id:13,name:'Green Chilli (Hari Mirch)',price:60,unit:'kg',available:20,category:'Others'},
+  {id:14,name:'Capsicum (Shimla Mirch)',price:80,unit:'kg',available:30,category:'Others'},
+  {id:15,name:'Brinjal (Baingan)',price:40,unit:'kg',available:40,category:'Others'}
+];
+
+function loadData(key, fallback) {
+  try {
+    const d = localStorage.getItem(key);
+    return d ? JSON.parse(d) : fallback;
+  } catch(e) { return fallback; }
+}
+function saveData(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+let menu = loadData(STORAGE_KEYS.menu, DEFAULT_MENU);
+let orders = loadData(STORAGE_KEYS.orders, []);
+let settings = loadData(STORAGE_KEYS.settings, DEFAULT_SETTINGS);
+
+function persist() {
+  saveData(STORAGE_KEYS.menu, menu);
+  saveData(STORAGE_KEYS.orders, orders);
+  saveData(STORAGE_KEYS.settings, settings);
+}
+
+// ============ STATE ============
+let currentPage = 'menu'; // menu, cart, checkout, bill, admin-login, admin, admin-menu-edit
+let cart = {}; // {itemId: qty}
+let currentOrder = null;
+let adminTab = 'orders'; // orders, menu, settings
+let editingItem = null; // for admin menu edit
+let showModal = false;
+let modalContent = null;
+let customerName = '';
+let customerPhone = '';
+
+// ============ HELPERS ============
+function getCartCount() {
+  return Object.values(cart).reduce((s,q) => s+q, 0);
+}
+function getCartTotal() {
+  let total = 0;
+  for (const [id, qty] of Object.entries(cart)) {
+    const item = menu.find(m => m.id === parseInt(id));
+    if (item) total += item.price * qty;
+  }
+  return total;
+}
+function getCartItems() {
+  return Object.entries(cart).filter(([_,q]) => q > 0).map(([id,qty]) => {
+    const item = menu.find(m => m.id === parseInt(id));
+    return item ? {...item, qty, amount: item.price * qty} : null;
+  }).filter(Boolean);
+}
+function generateOrderId() {
+  return 'ORD-' + Date.now().toString(36).toUpperCase();
+}
+function formatDate(d) {
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function formatCurrency(n) {
+  return '\u20B9' + n.toFixed(2);
+}
+function groupByCategory(items) {
+  const groups = {};
+  items.forEach(item => {
+    if (!groups[item.category]) groups[item.category] = [];
+    groups[item.category].push(item);
+  });
+  return groups;
+}
+
+// ============ RENDER ENGINE ============
+function render() {
+  const app = document.getElementById('app');
+  let html = '';
+
+  switch(currentPage) {
+    case 'menu': html = renderMenu(); break;
+    case 'cart': html = renderCart(); break;
+    case 'checkout': html = renderCheckout(); break;
+    case 'bill': html = renderBill(); break;
+    case 'admin-login': html = renderAdminLogin(); break;
+    case 'admin': html = renderAdmin(); break;
+    case 'admin-menu-edit': html = renderAdminMenuEdit(); break;
+  }
+
+  app.innerHTML = html;
+  attachEventListeners();
+}
+
+// ============ PAGES ============
+
+function renderHeader(title, showBack, showCart, showAdmin) {
+  const cartCount = getCartCount();
+  return `
+    <div class="header">
+      <div class="header-inner">
+        <div class="flex items-center gap-8">
+          ${showBack ? '<button class="back-btn" onclick="goBack()">&#8592;</button>' : ''}
+          <h1>${title}</h1>
+        </div>
+        <div class="flex items-center gap-8">
+          ${showCart ? `
+            <button class="back-btn cart-badge" onclick="navigate('cart')">
+              &#128722;
+              ${cartCount > 0 ? `<span class="count">${cartCount}</span>` : ''}
+            </button>
+          ` : ''}
+          ${showAdmin && CONFIG.ADMIN_ENABLED ? '<button class="back-btn" onclick="navigate(\'admin-login\')" title="Admin">&#9881;</button>' : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMenu() {
+  const grouped = groupByCategory(menu);
+  const cartCount = getCartCount();
+
+  let itemsHtml = '';
+  for (const [cat, items] of Object.entries(grouped)) {
+    itemsHtml += `<div class="category-title">${getCategoryEmoji(cat)} ${cat}</div>`;
+    itemsHtml += '<div class="card">';
+    items.forEach(item => {
+      const inCart = cart[item.id] || 0;
+      const isAvailable = item.available > 0;
+      itemsHtml += `
+        <div class="item-row ${!isAvailable ? 'text-gray' : ''}">
+          <div class="item-info">
+            <div class="item-name">${item.name}</div>
+            <div class="item-price">${formatCurrency(item.price)} / ${item.unit}</div>
+            <div class="item-avail">${isAvailable ? `${item.available} ${item.unit} available` : 'Out of stock'}</div>
+          </div>
+          <div class="qty-controls">
+            ${isAvailable ? `
+              ${inCart > 0 ? `
+                <button class="btn-icon btn-green" onclick="changeQty(${item.id}, -1)">&#8722;</button>
+                <span class="qty-display">${inCart}</span>
+              ` : ''}
+              <button class="btn-icon btn-green" onclick="changeQty(${item.id}, 1)" ${inCart >= item.available ? 'disabled style="opacity:0.4"' : ''}>&#43;</button>
+            ` : '<span class="text-gray" style="font-size:0.85rem">Sold Out</span>'}
+          </div>
+        </div>
+      `;
+    });
+    itemsHtml += '</div>';
+  }
+
+  return `
+    ${renderHeader('&#127813; ' + settings.vendorName, false, true, true)}
+    <div class="container fade-in">
+      <div class="card text-center" style="margin-top:16px;background:var(--green-light)">
+        <p style="font-size:0.95rem">${settings.welcomeMessage}</p>
+      </div>
+      ${itemsHtml}
+    </div>
+    ${cartCount > 0 ? `
+      <div class="bottom-nav no-print">
+        <button class="btn btn-green" onclick="navigate('cart')">
+          &#128722; View Cart (${cartCount} items) - ${formatCurrency(getCartTotal())}
+        </button>
+      </div>
+    ` : ''}
+  `;
+}
+
+function renderCart() {
+  const items = getCartItems();
+  if (items.length === 0) {
+    return `
+      ${renderHeader('Your Cart', true, false, false)}
+      <div class="container fade-in">
+        <div class="card text-center" style="margin-top:16px;padding:40px 16px">
+          <div style="font-size:3rem;margin-bottom:16px">&#128722;</div>
+          <h2>Your cart is empty</h2>
+          <p class="text-gray" style="margin:12px 0">Add some fresh vegetables!</p>
+          <button class="btn btn-green" style="margin-top:16px" onclick="navigate('menu')">Browse Vegetables</button>
+        </div>
+      </div>
+    `;
+  }
+
+  let rows = '';
+  items.forEach(item => {
+    rows += `
+      <div class="item-row">
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-price">${formatCurrency(item.price)} x ${item.qty} ${item.unit}</div>
+        </div>
+        <div class="flex items-center gap-8">
+          <span style="font-weight:700;min-width:70px;text-align:right">${formatCurrency(item.amount)}</span>
+          <div class="qty-controls" style="margin-left:8px">
+            <button class="btn-icon btn-green" onclick="changeQty(${item.id}, -1)">&#8722;</button>
+            <span class="qty-display">${item.qty}</span>
+            <button class="btn-icon btn-green" onclick="changeQty(${item.id}, 1)" ${item.qty >= item.available ? 'disabled style="opacity:0.4"' : ''}>&#43;</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  return `
+    ${renderHeader('Your Cart', true, false, false)}
+    <div class="container fade-in">
+      <div class="card" style="margin-top:16px">
+        ${rows}
+        <div class="bill-row total">
+          <span>Total</span>
+          <span>${formatCurrency(getCartTotal())}</span>
+        </div>
+      </div>
+      <button class="btn btn-red btn-sm" style="margin-bottom:16px" onclick="clearCart()">Clear Cart</button>
+    </div>
+    <div class="bottom-nav no-print">
+      <button class="btn btn-green" onclick="navigate('checkout')">
+        Proceed to Order &#8594;
+      </button>
+    </div>
+  `;
+}
+
+function renderCheckout() {
+  return `
+    ${renderHeader('Your Details', true, false, false)}
+    <div class="container fade-in">
+      <div class="card" style="margin-top:16px">
+        <h2 style="margin-bottom:16px">Enter Your Details</h2>
+        <div class="form-group">
+          <label for="custName">Your Name</label>
+          <input class="input" id="custName" type="text" placeholder="Enter your full name" value="${customerName}">
+        </div>
+        <div class="form-group">
+          <label for="custPhone">WhatsApp Number</label>
+          <input class="input" id="custPhone" type="tel" placeholder="e.g. 9876543210" value="${customerPhone}" maxlength="10">
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:8px">Order Summary</h3>
+        <p class="text-gray" style="font-size:0.85rem">${getCartCount()} items</p>
+        <div class="bill-row total" style="border-top:none;padding-top:8px;margin-top:0">
+          <span>Total</span>
+          <span>${formatCurrency(getCartTotal())}</span>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav no-print">
+      <button class="btn btn-green" onclick="submitOrder()">
+        &#9989; Confirm Order
+      </button>
+    </div>
+  `;
+}
+
+function renderBill() {
+  if (!currentOrder) { navigate('menu'); return ''; }
+  const o = currentOrder;
+
+  let rows = '';
+  o.items.forEach((item, i) => {
+    rows += `
+      <div class="bill-row">
+        <span>${i+1}. ${item.name}</span>
+        <span>${item.qty} ${item.unit}</span>
+      </div>
+      <div class="bill-row" style="padding-left:20px;color:var(--gray);font-size:0.85rem">
+        <span>${formatCurrency(item.price)} x ${item.qty}</span>
+        <span>${formatCurrency(item.amount)}</span>
+      </div>
+    `;
+  });
+
+  const waText = buildOrderWhatsAppMessage(o);
+  const waUrl = `https://wa.me/${settings.vendorPhone.replace(/\D/g,'')}?text=${encodeURIComponent(waText)}`;
+
+  return `
+    ${renderHeader('Order Confirmed!', false, false, false)}
+    <div class="container fade-in">
+      <div class="card text-center" style="margin-top:16px;background:var(--green-light)">
+        <div style="font-size:3rem">&#9989;</div>
+        <h2 style="color:var(--green)">Order Placed Successfully!</h2>
+        <p style="font-size:0.9rem;color:var(--text-light)">Order ID: ${o.id}</p>
+      </div>
+
+      <div class="bill" id="printBill">
+        <div class="bill-header">
+          <h2>${settings.vendorName}</h2>
+          ${settings.vendorPhone ? `<p style="font-size:0.85rem">Phone: ${settings.vendorPhone}</p>` : ''}
+          <p style="font-size:0.85rem">Date: ${formatDate(o.createdAt)}</p>
+        </div>
+        <div style="margin-bottom:8px">
+          <div class="bill-row"><span><strong>Customer:</strong></span><span>${o.customerName}</span></div>
+          <div class="bill-row"><span><strong>Phone:</strong></span><span>${o.customerPhone}</span></div>
+          <div class="bill-row"><span><strong>Order #:</strong></span><span>${o.id}</span></div>
+        </div>
+        <div style="border-top:1px solid var(--gray-border);padding-top:8px;margin-top:8px">
+          <div class="bill-row" style="font-weight:700"><span>Item</span><span>Qty</span></div>
+          ${rows}
+        </div>
+        <div class="bill-row total">
+          <span>TOTAL</span>
+          <span>${formatCurrency(o.total)}</span>
+        </div>
+        <div class="bill-footer">
+          <p>Payment: <span class="status-badge ${o.paymentStatus === 'paid' ? 'status-paid' : 'status-unpaid'}">${o.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}</span></p>
+          ${settings.upiId ? `<p style="margin-top:8px;font-size:0.85rem">UPI: ${settings.upiId}</p>` : ''}
+          <p style="margin-top:12px;font-size:0.9rem">Thank you for your order! &#128591;</p>
+        </div>
+      </div>
+
+      <div class="flex gap-8" style="flex-direction:column">
+        ${settings.vendorPhone ? `
+          <a href="${waUrl}" target="_blank" class="btn wa-btn no-print">
+            &#128172; Send Order via WhatsApp
+          </a>
+        ` : ''}
+        <button class="btn btn-white no-print" onclick="window.print()">&#128424; Print Bill</button>
+        <button class="btn btn-green no-print" onclick="startNewOrder()">&#127813; Place New Order</button>
+      </div>
+    </div>
+  `;
+}
+
+// ============ ADMIN PAGES ============
+
+function renderAdminLogin() {
+  return `
+    ${renderHeader('Admin Login', true, false, false)}
+    <div class="container fade-in">
+      <div class="card" style="margin-top:40px;max-width:400px;margin-left:auto;margin-right:auto">
+        <h2 class="text-center" style="margin-bottom:24px">&#128274; Admin Access</h2>
+        <div class="form-group">
+          <label for="adminPin">Enter PIN</label>
+          <input class="input" id="adminPin" type="password" placeholder="Enter 4-digit PIN" maxlength="10" style="text-align:center;font-size:1.4rem;letter-spacing:8px">
+        </div>
+        <button class="btn btn-green" onclick="adminLogin()">Login</button>
+        <p id="pinError" class="text-red text-center" style="margin-top:12px;display:none">Incorrect PIN. Try again.</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdmin() {
+  let content = '';
+  switch(adminTab) {
+    case 'orders': content = renderAdminOrders(); break;
+    case 'menu': content = renderAdminMenu(); break;
+    case 'settings': content = renderAdminSettings(); break;
+  }
+
+  return `
+    ${renderHeader('&#9881; Admin Panel', true, false, false)}
+    <div class="container fade-in">
+      <div class="tabs" style="margin-top:12px">
+        <button class="tab ${adminTab==='orders'?'active':''}" onclick="switchAdminTab('orders')">Orders</button>
+        <button class="tab ${adminTab==='menu'?'active':''}" onclick="switchAdminTab('menu')">Menu</button>
+        <button class="tab ${adminTab==='settings'?'active':''}" onclick="switchAdminTab('settings')">Settings</button>
+      </div>
+      ${content}
+    </div>
+  `;
+}
+
+function renderAdminOrders() {
+  if (orders.length === 0) {
+    return `
+      <div class="card text-center" style="padding:40px 16px">
+        <div style="font-size:2.5rem;margin-bottom:12px">&#128203;</div>
+        <h3>No orders yet</h3>
+        <p class="text-gray">Orders will appear here when customers place them.</p>
+      </div>
+    `;
+  }
+
+  const sorted = [...orders].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  let html = '';
+  sorted.forEach(o => {
+    const itemSummary = o.items.map(i => `${i.name} x${i.qty}`).join(', ');
+    const waAck = `https://wa.me/${o.customerPhone.replace(/\D/g,'')}?text=${encodeURIComponent(`Hi ${o.customerName}! Your payment of ${formatCurrency(o.total)} for order ${o.id} has been received. Thank you! - ${settings.vendorName}`)}`;
+
+    html += `
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <strong>${o.customerName}</strong>
+            <div class="text-gray" style="font-size:0.8rem">${o.customerPhone}</div>
+          </div>
+          <div style="text-align:right">
+            <span class="status-badge ${o.paymentStatus==='paid'?'status-paid':'status-unpaid'}">${o.paymentStatus==='paid'?'PAID':'UNPAID'}</span>
+            <div class="text-gray" style="font-size:0.75rem;margin-top:4px">${o.id}</div>
+          </div>
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:4px">${itemSummary}</p>
+        <div class="flex space-between items-center" style="margin-top:8px">
+          <strong style="font-size:1.1rem">${formatCurrency(o.total)}</strong>
+          <span class="text-gray" style="font-size:0.8rem">${formatDate(o.createdAt)}</span>
+        </div>
+        <div class="flex gap-8" style="margin-top:12px">
+          ${o.paymentStatus !== 'paid' ? `
+            <button class="btn btn-green btn-sm" style="flex:1" onclick="markPaid('${o.id}')">&#9989; Mark Paid</button>
+          ` : `
+            <a href="${waAck}" target="_blank" class="btn wa-btn btn-sm" style="flex:1">&#128172; Send Acknowledgement</a>
+          `}
+          <button class="btn btn-red btn-sm" style="flex:0 0 auto;width:auto;padding:10px 14px" onclick="deleteOrder('${o.id}')">&#128465;</button>
+        </div>
+      </div>
+    `;
+  });
+
+  return html;
+}
+
+function renderAdminMenu() {
+  const grouped = groupByCategory(menu);
+  let html = `
+    <button class="btn btn-green" style="margin-bottom:16px" onclick="openAddItem()">&#43; Add Vegetable</button>
+  `;
+
+  for (const [cat, items] of Object.entries(grouped)) {
+    html += `<div class="category-title">${getCategoryEmoji(cat)} ${cat}</div>`;
+    items.forEach(item => {
+      html += `
+        <div class="card">
+          <div class="flex space-between items-center">
+            <div>
+              <strong>${item.name}</strong>
+              <div style="font-size:0.85rem">${formatCurrency(item.price)} / ${item.unit} &bull; ${item.available} available</div>
+            </div>
+            <div class="flex gap-8">
+              <button class="btn-icon btn-gray" onclick="openEditItem(${item.id})">&#9998;</button>
+              <button class="btn-icon btn-red" onclick="deleteMenuItem(${item.id})">&#128465;</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  // WhatsApp share menu
+  if (settings.vendorPhone) {
+    const menuText = buildMenuWhatsAppMessage();
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(menuText)}`;
+    html += `
+      <a href="${waUrl}" target="_blank" class="btn wa-btn" style="margin-top:16px">
+        &#128172; Share Menu via WhatsApp
+      </a>
+    `;
+  }
+
+  return html;
+}
+
+function renderAdminSettings() {
+  return `
+    <div class="card">
+      <h3 style="margin-bottom:16px">Business Details</h3>
+      <div class="form-group">
+        <label>Business Name</label>
+        <input class="input" id="setName" value="${settings.vendorName}">
+      </div>
+      <div class="form-group">
+        <label>WhatsApp Number (with country code, e.g. 919876543210)</label>
+        <input class="input" id="setPhone" type="tel" value="${settings.vendorPhone}" placeholder="e.g. 919876543210">
+      </div>
+      <div class="form-group">
+        <label>UPI ID (for payments)</label>
+        <input class="input" id="setUpi" value="${settings.upiId}" placeholder="e.g. name@upi">
+      </div>
+      <div class="form-group">
+        <label>Welcome Message</label>
+        <input class="input" id="setWelcome" value="${settings.welcomeMessage}">
+      </div>
+      <button class="btn btn-green" onclick="saveSettings()">&#128190; Save Settings</button>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:8px">&#128202; Google Sheets (Order Tracking)</h3>
+      <p class="text-gray" style="font-size:0.8rem;margin-bottom:12px">Connect a Google Sheet to automatically receive all customer orders. See the setup guide included with this app.</p>
+      <div class="form-group">
+        <label>Google Apps Script URL</label>
+        <input class="input" id="setSheetUrl" value="${settings.sheetUrl || ''}" placeholder="https://script.google.com/macros/s/...">
+      </div>
+      <div class="form-group">
+        <label>Secret Token (must match the token in your Apps Script)</label>
+        <input class="input" id="setSheetToken" value="${settings.sheetToken || ''}" placeholder="e.g. mango2026">
+      </div>
+      <button class="btn btn-green" onclick="saveSheetUrl()">&#128190; Save Sheet Settings</button>
+      ${settings.sheetUrl ? '<p class="text-green" style="font-size:0.85rem;margin-top:8px">&#9989; Connected — orders will sync to your Google Sheet</p>' : ''}
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:16px">&#128274; Change PIN</h3>
+      <div class="form-group">
+        <label>Current PIN</label>
+        <input class="input" id="oldPin" type="password" maxlength="10">
+      </div>
+      <div class="form-group">
+        <label>New PIN</label>
+        <input class="input" id="newPin" type="password" maxlength="10">
+      </div>
+      <button class="btn btn-orange" onclick="changePin()">Change PIN</button>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:16px">&#128190; Data Backup</h3>
+      <div class="flex gap-8" style="flex-direction:column">
+        <button class="btn btn-white" onclick="exportData()">&#11015; Export All Data</button>
+        <label class="btn btn-white" style="cursor:pointer">
+          &#11014; Import Data
+          <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+        </label>
+      </div>
+    </div>
+
+    <button class="btn btn-red" style="margin-top:8px" onclick="adminLogout()">&#128682; Logout</button>
+  `;
+}
+
+function renderAdminMenuEdit() {
+  const isNew = !editingItem;
+  const item = editingItem || {name:'', price:'', unit:'kg', available:'', category:'Leafy Greens'};
+
+  return `
+    ${renderHeader(isNew ? 'Add Vegetable' : 'Edit Vegetable', true, false, false)}
+    <div class="container fade-in">
+      <div class="card" style="margin-top:16px">
+        <div class="form-group">
+          <label>Vegetable Name</label>
+          <input class="input" id="itemName" value="${item.name}" placeholder="e.g. Tomato (Tamatar)">
+        </div>
+        <div class="form-group">
+          <label>Price (&#8377;)</label>
+          <input class="input" id="itemPrice" type="number" value="${item.price}" placeholder="e.g. 40" min="0">
+        </div>
+        <div class="form-group">
+          <label>Unit</label>
+          <select class="input" id="itemUnit">
+            <option value="kg" ${item.unit==='kg'?'selected':''}>Kilogram (kg)</option>
+            <option value="bunch" ${item.unit==='bunch'?'selected':''}>Bunch</option>
+            <option value="piece" ${item.unit==='piece'?'selected':''}>Piece</option>
+            <option value="dozen" ${item.unit==='dozen'?'selected':''}>Dozen</option>
+            <option value="250g" ${item.unit==='250g'?'selected':''}>250 grams</option>
+            <option value="500g" ${item.unit==='500g'?'selected':''}>500 grams</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Available Quantity</label>
+          <input class="input" id="itemAvail" type="number" value="${item.available}" placeholder="e.g. 50" min="0">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select class="input" id="itemCat">
+            <option ${item.category==='Leafy Greens'?'selected':''}>Leafy Greens</option>
+            <option ${item.category==='Root Vegetables'?'selected':''}>Root Vegetables</option>
+            <option ${item.category==='Gourds'?'selected':''}>Gourds</option>
+            <option ${item.category==='Others'?'selected':''}>Others</option>
+          </select>
+        </div>
+        <button class="btn btn-green" onclick="saveMenuItem(${editingItem ? editingItem.id : 'null'})">
+          ${isNew ? '&#43; Add to Menu' : '&#128190; Save Changes'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// ============ ACTIONS ============
+
+function navigate(page) {
+  // Block admin access if not enabled
+  if (!CONFIG.ADMIN_ENABLED && (page === 'admin-login' || page === 'admin' || page === 'admin-menu-edit')) {
+    return;
+  }
+  currentPage = page;
+  render();
+  window.scrollTo(0, 0);
+}
+
+function goBack() {
+  switch(currentPage) {
+    case 'cart': navigate('menu'); break;
+    case 'checkout': navigate('cart'); break;
+    case 'admin-login': navigate('menu'); break;
+    case 'admin': navigate('menu'); break;
+    case 'admin-menu-edit': currentPage = 'admin'; adminTab = 'menu'; render(); break;
+    default: navigate('menu');
+  }
+}
+
+function changeQty(itemId, delta) {
+  const item = menu.find(m => m.id === itemId);
+  if (!item) return;
+  const current = cart[itemId] || 0;
+  const next = current + delta;
+  if (next <= 0) {
+    delete cart[itemId];
+  } else if (next <= item.available) {
+    cart[itemId] = next;
+  }
+  render();
+}
+
+function clearCart() {
+  if (confirm('Remove all items from cart?')) {
+    cart = {};
+    render();
+  }
+}
+
+function submitOrder() {
+  const name = document.getElementById('custName').value.trim();
+  const phone = document.getElementById('custPhone').value.trim();
+  if (!name) { alert('Please enter your name'); return; }
+  if (!phone || phone.length < 10) { alert('Please enter a valid 10-digit phone number'); return; }
+
+  customerName = name;
+  customerPhone = phone;
+
+  const items = getCartItems();
+  const order = {
+    id: generateOrderId(),
+    customerName: name,
+    customerPhone: phone,
+    items: items,
+    total: getCartTotal(),
+    status: 'confirmed',
+    paymentStatus: 'unpaid',
+    createdAt: new Date().toISOString()
+  };
+
+  // Deduct from available stock
+  items.forEach(ci => {
+    const mi = menu.find(m => m.id === ci.id);
+    if (mi) mi.available = Math.max(0, mi.available - ci.qty);
+  });
+
+  orders.push(order);
+  currentOrder = order;
+  cart = {};
+  persist();
+  sendToSheet(order);
+  navigate('bill');
+}
+
+function startNewOrder() {
+  currentOrder = null;
+  navigate('menu');
+}
+
+// Admin actions
+function adminLogin() {
+  if (!CONFIG.ADMIN_ENABLED) { navigate('menu'); return; }
+  const pin = document.getElementById('adminPin').value;
+  if (pin === settings.pin) {
+    navigate('admin');
+  } else {
+    document.getElementById('pinError').style.display = 'block';
+  }
+}
+
+function adminLogout() {
+  navigate('menu');
+}
+
+function switchAdminTab(tab) {
+  adminTab = tab;
+  render();
+}
+
+function markPaid(orderId) {
+  const o = orders.find(x => x.id === orderId);
+  if (o) {
+    o.paymentStatus = 'paid';
+    persist();
+    sendPaymentUpdateToSheet(orderId, 'paid');
+    render();
+  }
+}
+
+function deleteOrder(orderId) {
+  if (confirm('Delete this order? This cannot be undone.')) {
+    orders = orders.filter(x => x.id !== orderId);
+    persist();
+    render();
+  }
+}
+
+function openAddItem() {
+  editingItem = null;
+  navigate('admin-menu-edit');
+}
+
+function openEditItem(id) {
+  editingItem = {...menu.find(m => m.id === id)};
+  navigate('admin-menu-edit');
+}
+
+function saveMenuItem(existingId) {
+  const name = document.getElementById('itemName').value.trim();
+  const price = parseFloat(document.getElementById('itemPrice').value);
+  const unit = document.getElementById('itemUnit').value;
+  const available = parseInt(document.getElementById('itemAvail').value);
+  const category = document.getElementById('itemCat').value;
+
+  if (!name) { alert('Please enter a name'); return; }
+  if (isNaN(price) || price < 0) { alert('Please enter a valid price'); return; }
+  if (isNaN(available) || available < 0) { alert('Please enter available quantity'); return; }
+
+  if (existingId) {
+    const idx = menu.findIndex(m => m.id === existingId);
+    if (idx >= 0) menu[idx] = {...menu[idx], name, price, unit, available, category};
+  } else {
+    const newId = menu.length > 0 ? Math.max(...menu.map(m=>m.id)) + 1 : 1;
+    menu.push({id: newId, name, price, unit, available, category});
+  }
+  persist();
+  editingItem = null;
+  currentPage = 'admin';
+  adminTab = 'menu';
+  render();
+}
+
+function deleteMenuItem(id) {
+  if (confirm('Remove this item from the menu?')) {
+    menu = menu.filter(m => m.id !== id);
+    persist();
+    render();
+  }
+}
+
+function saveSettings() {
+  settings.vendorName = document.getElementById('setName').value.trim() || settings.vendorName;
+  settings.vendorPhone = document.getElementById('setPhone').value.trim();
+  settings.upiId = document.getElementById('setUpi').value.trim();
+  settings.welcomeMessage = document.getElementById('setWelcome').value.trim() || settings.welcomeMessage;
+  persist();
+  alert('Settings saved!');
+  render();
+}
+
+function saveSheetUrl() {
+  settings.sheetUrl = document.getElementById('setSheetUrl').value.trim();
+  settings.sheetToken = document.getElementById('setSheetToken').value.trim();
+  if (settings.sheetUrl && !settings.sheetToken) {
+    alert('Please set a secret token for security. Without it, anyone with your URL could add fake orders.');
+    return;
+  }
+  persist();
+  alert(settings.sheetUrl ? 'Google Sheet connected! Orders will now sync automatically.' : 'Google Sheet disconnected.');
+  render();
+}
+
+function changePin() {
+  const oldPin = document.getElementById('oldPin').value;
+  const newPin = document.getElementById('newPin').value;
+  if (oldPin !== settings.pin) { alert('Current PIN is incorrect'); return; }
+  if (!newPin || newPin.length < 4) { alert('New PIN must be at least 4 characters'); return; }
+  settings.pin = newPin;
+  persist();
+  alert('PIN changed successfully!');
+  document.getElementById('oldPin').value = '';
+  document.getElementById('newPin').value = '';
+}
+
+function exportData() {
+  const data = {menu, orders, settings, exportedAt: new Date().toISOString()};
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'veggie-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.menu) { menu = data.menu; saveData(STORAGE_KEYS.menu, menu); }
+      if (data.orders) { orders = data.orders; saveData(STORAGE_KEYS.orders, orders); }
+      if (data.settings) { settings = {...DEFAULT_SETTINGS, ...data.settings}; saveData(STORAGE_KEYS.settings, settings); }
+      alert('Data imported successfully!');
+      render();
+    } catch(err) {
+      alert('Invalid backup file. Please select a valid JSON file.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ============ GOOGLE SHEETS ============
+
+function sendToSheet(order) {
+  if (!CONFIG.SHEET_URL) return;
+  try {
+    const rows = order.items.map(item => ({
+      orderId: order.id,
+      date: new Date(order.createdAt).toLocaleDateString('en-IN'),
+      time: new Date(order.createdAt).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'}),
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      itemName: item.name,
+      quantity: item.qty,
+      unit: item.unit,
+      pricePerUnit: item.price,
+      amount: item.amount,
+      orderTotal: order.total,
+      paymentStatus: order.paymentStatus
+    }));
+
+    fetch(CONFIG.SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ token: CONFIG.SHEET_TOKEN, orders: rows })
+    }).catch(function(err) {
+      console.log('Sheet sync failed:', err);
+    });
+  } catch(e) {
+    console.log('Sheet sync error:', e);
+  }
+}
+
+function sendPaymentUpdateToSheet(orderId, status) {
+  if (!CONFIG.SHEET_URL) return;
+  try {
+    fetch(CONFIG.SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ token: CONFIG.SHEET_TOKEN, paymentUpdate: { orderId: orderId, paymentStatus: status } })
+    }).catch(function(err) {
+      console.log('Payment update sync failed:', err);
+    });
+  } catch(e) {
+    console.log('Payment update error:', e);
+  }
+}
+
+// ============ WHATSAPP MESSAGES ============
+
+function buildOrderWhatsAppMessage(order) {
+  let msg = `*New Order - ${settings.vendorName}*\n`;
+  msg += `Order #: ${order.id}\n`;
+  msg += `Date: ${formatDate(order.createdAt)}\n\n`;
+  msg += `*Customer:* ${order.customerName}\n`;
+  msg += `*Phone:* ${order.customerPhone}\n\n`;
+  msg += `*Order Items:*\n`;
+  order.items.forEach((item, i) => {
+    msg += `${i+1}. ${item.name} - ${item.qty} ${item.unit} @ ${formatCurrency(item.price)} = ${formatCurrency(item.amount)}\n`;
+  });
+  msg += `\n*TOTAL: ${formatCurrency(order.total)}*\n`;
+  if (settings.upiId) msg += `\nPay via UPI: ${settings.upiId}`;
+  return msg;
+}
+
+function buildMenuWhatsAppMessage() {
+  const grouped = groupByCategory(menu.filter(m => m.available > 0));
+  let msg = `*${settings.vendorName} - Weekly Menu*\n`;
+  msg += `${settings.welcomeMessage}\n\n`;
+  for (const [cat, items] of Object.entries(grouped)) {
+    msg += `*${getCategoryEmoji(cat)} ${cat}*\n`;
+    items.forEach(item => {
+      msg += `  ${item.name} - ${formatCurrency(item.price)}/${item.unit}\n`;
+    });
+    msg += '\n';
+  }
+  msg += `To order, please visit our page or reply to this message.`;
+  return msg;
+}
+
+// ============ HELPERS ============
+
+function getCategoryEmoji(cat) {
+  const emojis = {
+    'Leafy Greens': '&#129388;',
+    'Root Vegetables': '&#129364;',
+    'Gourds': '&#129362;',
+    'Others': '&#127813;'
+  };
+  return emojis[cat] || '&#127813;';
+}
+
+function attachEventListeners() {
+  // Enter key on PIN field
+  const pinField = document.getElementById('adminPin');
+  if (pinField) {
+    pinField.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') adminLogin();
+    });
+    pinField.focus();
+  }
+  // Enter key on checkout
+  const phoneField = document.getElementById('custPhone');
+  if (phoneField) {
+    phoneField.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') submitOrder();
+    });
+  }
+}
+
+// ============ INIT ============
+render();
+</script>
+</body>
+</html>

@@ -129,8 +129,8 @@ select.input{appearance:auto}
 // Set these ONCE before sharing the file with customers.
 // These are embedded in the file and used by all customers.
 const CONFIG = {
-  SHEET_URL: 'https://script.google.com/macros/s/AKfycbzgh5HVO4wIWjJNXjBmNP4iGP6TPekaZZJGC0pJC5SOar_Q8p1MAG5qi7vkNQcZ2KlH/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
-  SHEET_TOKEN: 'mango2026',       // Must match SECRET_TOKEN in your Apps Script, e.g. 'mango2026'
+  SHEET_URL: 'https://script.google.com/macros/s/AKfycbwToa1M_6QITri3KDUQnizlH6i2Nup664DJBfqT0-7GZsfFZotbheg5xxZyLLXDAMMH/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
+  SHEET_TOKEN: '',       // Must match SECRET_TOKEN in your Apps Script, e.g. 'mango2026'
   VENDOR_NAME: 'Fresh Veggie Farm',
   VENDOR_PHONE: '',      // With country code, e.g. '919876543210'
   UPI_ID: '',            // e.g. 'name@upi'
@@ -194,7 +194,7 @@ function persist() {
 }
 
 // ============ STATE ============
-let currentPage = 'menu'; // menu, cart, checkout, bill, admin-login, admin, admin-menu-edit
+let currentPage = 'menu'; // menu, cart, checkout, bill, change-pin, admin-login, admin, admin-menu-edit
 let cart = {}; // {itemId: qty}
 let currentOrder = null;
 let adminTab = 'orders'; // orders, menu, settings
@@ -263,6 +263,7 @@ function render() {
     case 'cart': html = renderCart(); break;
     case 'checkout': html = renderCheckout(); break;
     case 'bill': html = renderBill(); break;
+    case 'change-pin': html = renderChangePin(); break;
     case 'admin-login': html = renderAdminLogin(); break;
     case 'admin': html = renderAdmin(); break;
     case 'admin-menu-edit': html = renderAdminMenuEdit(); break;
@@ -343,6 +344,7 @@ function renderMenu() {
     <div class="container fade-in">
       <div class="card text-center" style="margin-top:16px;background:var(--green-light)">
         <p style="font-size:0.95rem">${settings.welcomeMessage}</p>
+        <button class="btn btn-white btn-sm" style="margin-top:10px;font-size:0.8rem" onclick="navigate('change-pin')">&#128274; Change PIN</button>
       </div>
       ${itemsHtml}
     </div>
@@ -431,6 +433,11 @@ function renderCheckout() {
           <label for="custPhone">WhatsApp Number</label>
           <input class="input" id="custPhone" type="tel" placeholder="e.g. 9876543210" value="${customerPhone}" maxlength="10">
         </div>
+        <div class="form-group">
+          <label for="custPin">Your PIN</label>
+          <input class="input" id="custPin" type="password" placeholder="4-digit PIN (default: 1234)" maxlength="8" inputmode="numeric">
+          <p style="font-size:0.75rem;color:var(--gray);margin-top:4px">First time? Use 1234, then change it from the menu.</p>
+        </div>
       </div>
       <div class="card">
         <h3 style="margin-bottom:8px">Order Summary</h3>
@@ -516,6 +523,75 @@ function renderBill() {
       </div>
     </div>
   `;
+}
+
+// ============ CHANGE PIN PAGE ============
+
+function renderChangePin() {
+  return `
+    ${renderHeader('&#128274; Change PIN', true, false, false)}
+    <div class="container fade-in">
+      <div class="card" style="margin-top:16px">
+        <h2 style="margin-bottom:16px">Change Your Order PIN</h2>
+        <div class="form-group">
+          <label for="pinPhone">Your Phone Number</label>
+          <input class="input" id="pinPhone" type="tel" placeholder="e.g. 9876543210" value="${customerPhone}" maxlength="10" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label for="pinOld">Current PIN</label>
+          <input class="input" id="pinOld" type="password" placeholder="Enter current PIN" maxlength="8" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label for="pinNew">New PIN</label>
+          <input class="input" id="pinNew" type="password" placeholder="Choose a new 4-digit PIN" maxlength="8" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label for="pinConfirm">Confirm New PIN</label>
+          <input class="input" id="pinConfirm" type="password" placeholder="Re-enter new PIN" maxlength="8" inputmode="numeric">
+        </div>
+        <div id="pinMsg" style="display:none;padding:12px;border-radius:8px;margin-bottom:12px;text-align:center"></div>
+        <button class="btn btn-green" onclick="sendPinChange()" style="width:100%">Update PIN</button>
+      </div>
+    </div>
+  `;
+}
+
+function sendPinChange() {
+  const phone = document.getElementById('pinPhone').value.trim();
+  const oldPin = document.getElementById('pinOld').value.trim();
+  const newPin = document.getElementById('pinNew').value.trim();
+  const confirmPin = document.getElementById('pinConfirm').value.trim();
+  const msgEl = document.getElementById('pinMsg');
+
+  function showMsg(text, isError) {
+    msgEl.style.display = 'block';
+    msgEl.style.background = isError ? '#ffeaea' : 'var(--green-light)';
+    msgEl.style.color = isError ? '#c00' : 'var(--green)';
+    msgEl.textContent = text;
+  }
+
+  if (!phone || phone.length < 10) { showMsg('Enter a valid 10-digit phone number', true); return; }
+  if (!oldPin) { showMsg('Enter your current PIN', true); return; }
+  if (!newPin || newPin.length < 4) { showMsg('New PIN must be at least 4 digits', true); return; }
+  if (newPin !== confirmPin) { showMsg('New PIN and confirmation do not match', true); return; }
+
+  if (!CONFIG.SHEET_URL) { showMsg('Sheet not configured. Contact vendor.', true); return; }
+
+  showMsg('Updating PIN...', false);
+
+  fetch(CONFIG.SHEET_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      token: CONFIG.SHEET_TOKEN,
+      pinChange: { phone: phone, oldPin: oldPin, newPin: newPin }
+    })
+  }).then(function() {
+    showMsg('PIN change request sent! If your old PIN was correct, the new PIN is now active.', false);
+  }).catch(function() {
+    showMsg('Could not reach server. Check your connection.', true);
+  });
 }
 
 // ============ ADMIN PAGES ============
@@ -777,6 +853,7 @@ function goBack() {
   switch(currentPage) {
     case 'cart': navigate('menu'); break;
     case 'checkout': navigate('cart'); break;
+    case 'change-pin': navigate('menu'); break;
     case 'admin-login': navigate('menu'); break;
     case 'admin': navigate('menu'); break;
     case 'admin-menu-edit': currentPage = 'admin'; adminTab = 'menu'; render(); break;
@@ -822,8 +899,10 @@ function clearCart() {
 function submitOrder() {
   const name = document.getElementById('custName').value.trim();
   const phone = document.getElementById('custPhone').value.trim();
+  const pin = document.getElementById('custPin').value.trim();
   if (!name) { alert('Please enter your name'); return; }
   if (!phone || phone.length < 10) { alert('Please enter a valid 10-digit phone number'); return; }
+  if (!pin) { alert('Please enter your PIN'); return; }
 
   customerName = name;
   customerPhone = phone;
@@ -833,6 +912,7 @@ function submitOrder() {
     id: generateOrderId(),
     customerName: name,
     customerPhone: phone,
+    pin: pin,
     items: items,
     total: getCartTotal(),
     status: 'confirmed',
@@ -1027,7 +1107,7 @@ function sendToSheet(order) {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ token: CONFIG.SHEET_TOKEN, orders: rows })
+      body: JSON.stringify({ token: CONFIG.SHEET_TOKEN, pin: order.pin || '', orders: rows })
     }).catch(function(err) {
       console.log('Sheet sync failed:', err);
     });

@@ -129,7 +129,7 @@ select.input{appearance:auto}
 // Set these ONCE before sharing the file with customers.
 // These are embedded in the file and used by all customers.
 const CONFIG = {
-  SHEET_URL: 'https://script.google.com/macros/s/AKfycbwToa1M_6QITri3KDUQnizlH6i2Nup664DJBfqT0-7GZsfFZotbheg5xxZyLLXDAMMH/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
+  SHEET_URL: 'https://script.google.com/macros/s/AKfycbxGrmNGMYF8aFNNCyefOiloRsZSmV_hbme2qPAY2lTgVSmNFGDfsWGo566PFjb7pWQW/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
   SHEET_TOKEN: 'mango2026',       // Must match SECRET_TOKEN in your Apps Script, e.g. 'mango2026'
   VENDOR_NAME: 'Fresh Veggie Farm',
   VENDOR_PHONE: '',      // With country code, e.g. '919876543210'
@@ -194,7 +194,7 @@ function persist() {
 }
 
 // ============ STATE ============
-let currentPage = 'menu'; // menu, cart, checkout, bill, change-pin, admin-login, admin, admin-menu-edit
+let currentPage = 'menu'; // menu, cart, checkout, bill, my-orders, change-pin, admin-login, admin, admin-menu-edit
 let cart = {}; // {itemId: qty}
 let currentOrder = null;
 let adminTab = 'orders'; // orders, menu, settings
@@ -264,6 +264,7 @@ function render() {
     case 'checkout': html = renderCheckout(); break;
     case 'bill': html = renderBill(); break;
     case 'change-pin': html = renderChangePin(); break;
+    case 'my-orders': html = renderMyOrders(); break;
     case 'admin-login': html = renderAdminLogin(); break;
     case 'admin': html = renderAdmin(); break;
     case 'admin-menu-edit': html = renderAdminMenuEdit(); break;
@@ -344,7 +345,10 @@ function renderMenu() {
     <div class="container fade-in">
       <div class="card text-center" style="margin-top:16px;background:var(--green-light)">
         <p style="font-size:0.95rem">${settings.welcomeMessage}</p>
-        <button class="btn btn-white btn-sm" style="margin-top:10px;font-size:0.8rem" onclick="navigate('change-pin')">&#128274; Change PIN</button>
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-white btn-sm" style="font-size:0.8rem" onclick="navigate('my-orders')">&#128203; My Orders</button>
+          <button class="btn btn-white btn-sm" style="font-size:0.8rem" onclick="navigate('change-pin')">&#128274; Change PIN</button>
+        </div>
       </div>
       ${itemsHtml}
     </div>
@@ -523,6 +527,115 @@ function renderBill() {
       </div>
     </div>
   `;
+}
+
+// ============ MY ORDERS PAGE ============
+
+let myOrdersData = null;
+let myOrdersLoading = false;
+let myOrdersError = '';
+
+function renderMyOrders() {
+  let content = '';
+
+  if (myOrdersData === null && !myOrdersLoading) {
+    // Show phone/PIN form to look up orders
+    content = `
+      <div class="card" style="margin-top:16px">
+        <h2 style="margin-bottom:16px">View Your Orders</h2>
+        <div class="form-group">
+          <label for="myOrdersPhone">Phone Number</label>
+          <input class="input" id="myOrdersPhone" type="tel" placeholder="e.g. 9876543210" value="${customerPhone}" maxlength="10" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label for="myOrdersPin">Your PIN</label>
+          <input class="input" id="myOrdersPin" type="password" placeholder="Enter your PIN" maxlength="8" inputmode="numeric">
+        </div>
+        ${myOrdersError ? `<p style="color:#c00;background:#ffeaea;padding:10px;border-radius:8px;text-align:center;margin-bottom:12px">${myOrdersError}</p>` : ''}
+        <button class="btn btn-green" style="width:100%" onclick="fetchMyOrders()">View Orders</button>
+      </div>
+    `;
+  } else if (myOrdersLoading) {
+    content = `
+      <div class="card text-center" style="margin-top:16px;padding:40px">
+        <p style="font-size:1.1rem">Loading your orders...</p>
+      </div>
+    `;
+  } else if (myOrdersData && myOrdersData.length === 0) {
+    content = `
+      <div class="card text-center" style="margin-top:16px">
+        <p style="font-size:1.1rem;color:var(--gray)">No orders found for this phone number.</p>
+        <button class="btn btn-white" style="margin-top:12px" onclick="myOrdersData=null;myOrdersError='';render()">Try Again</button>
+      </div>
+    `;
+  } else if (myOrdersData) {
+    content = myOrdersData.map(function(order) {
+      const itemsList = order.items.map(function(it) {
+        return '<div class="bill-row" style="font-size:0.9rem"><span>' + it.name + '</span><span>' + it.qty + ' ' + it.unit + '</span></div>';
+      }).join('');
+
+      const statusClass = order.paymentStatus === 'paid' ? 'status-paid' : 'status-unpaid';
+      const statusText = order.paymentStatus === 'paid' ? 'PAID' : 'PENDING';
+
+      return '<div class="card" style="margin-top:12px">' +
+        '<div class="flex items-center" style="justify-content:space-between;margin-bottom:8px">' +
+          '<strong>' + order.orderId + '</strong>' +
+          '<span class="status-badge ' + statusClass + '">' + statusText + '</span>' +
+        '</div>' +
+        '<p style="font-size:0.8rem;color:var(--gray);margin-bottom:8px">' + order.date + ' ' + order.time + '</p>' +
+        '<div style="border-top:1px solid var(--gray-border);padding-top:8px">' + itemsList + '</div>' +
+        '<div class="bill-row total"><span>Total</span><span>' + formatCurrency(Number(order.total)) + '</span></div>' +
+      '</div>';
+    }).join('');
+
+    content += `
+      <div style="margin-top:16px;text-align:center">
+        <button class="btn btn-white btn-sm" onclick="myOrdersData=null;myOrdersError='';render()">&#8592; Back</button>
+      </div>
+    `;
+  }
+
+  return `
+    ${renderHeader('&#128203; My Orders', true, false, false)}
+    <div class="container fade-in">
+      ${content}
+    </div>
+  `;
+}
+
+function fetchMyOrders() {
+  const phone = document.getElementById('myOrdersPhone').value.trim();
+  const pin = document.getElementById('myOrdersPin').value.trim();
+
+  if (!phone || phone.length < 10) { myOrdersError = 'Enter a valid 10-digit phone number'; render(); return; }
+  if (!pin) { myOrdersError = 'Enter your PIN'; render(); return; }
+  if (!CONFIG.SHEET_URL) { myOrdersError = 'Sheet not configured. Contact vendor.'; render(); return; }
+
+  customerPhone = phone;
+  myOrdersLoading = true;
+  myOrdersError = '';
+  render();
+
+  const url = CONFIG.SHEET_URL + '?token=' + encodeURIComponent(CONFIG.SHEET_TOKEN) + '&phone=' + encodeURIComponent(phone) + '&pin=' + encodeURIComponent(pin);
+
+  fetch(url)
+    .then(function(resp) { return resp.json(); })
+    .then(function(data) {
+      myOrdersLoading = false;
+      if (data.status === 'success') {
+        myOrdersData = data.orders;
+      } else {
+        myOrdersError = data.message || 'Could not fetch orders';
+        myOrdersData = null;
+      }
+      render();
+    })
+    .catch(function(err) {
+      myOrdersLoading = false;
+      myOrdersError = 'Could not reach server. Check your connection.';
+      myOrdersData = null;
+      render();
+    });
 }
 
 // ============ CHANGE PIN PAGE ============
@@ -854,6 +967,7 @@ function goBack() {
     case 'cart': navigate('menu'); break;
     case 'checkout': navigate('cart'); break;
     case 'change-pin': navigate('menu'); break;
+    case 'my-orders': navigate('menu'); break;
     case 'admin-login': navigate('menu'); break;
     case 'admin': navigate('menu'); break;
     case 'admin-menu-edit': currentPage = 'admin'; adminTab = 'menu'; render(); break;

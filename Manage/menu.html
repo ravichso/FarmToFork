@@ -129,7 +129,7 @@ select.input{appearance:auto}
 // Set these ONCE before sharing the file with customers.
 // These are embedded in the file and used by all customers.
 const CONFIG = {
-  SHEET_URL: 'https://script.google.com/macros/s/AKfycbxGrmNGMYF8aFNNCyefOiloRsZSmV_hbme2qPAY2lTgVSmNFGDfsWGo566PFjb7pWQW/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
+  SHEET_URL: 'https://script.google.com/macros/s/AKfycbwED_xZnny6FCCvMCjLvdSEP7rIyPwttQQmv0pITPXO_zX0Mq38jss_o5RGoAqwh2Sr/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
   SHEET_TOKEN: 'mango2026',       // Must match SECRET_TOKEN in your Apps Script, e.g. 'mango2026'
   VENDOR_NAME: 'Fresh Veggie Farm',
   VENDOR_PHONE: '',      // With country code, e.g. '919876543210'
@@ -534,12 +534,22 @@ function renderBill() {
 let myOrdersData = null;
 let myOrdersLoading = false;
 let myOrdersError = '';
+let myOrdersPhone = '';
+let myOrdersPin = '';
+let myOrdersActionMsg = {};  // { orderId: { text, isError } }
+
+function getStatusDisplay(status) {
+  const s = String(status).toLowerCase();
+  if (s === 'paid') return { cls: 'status-paid', text: 'PAID' };
+  if (s === 'claimed') return { cls: 'status-unpaid', text: 'PAYMENT SENT' };
+  if (s === 'cancelled') return { cls: '', text: 'CANCELLED' };
+  return { cls: 'status-unpaid', text: 'PENDING' };
+}
 
 function renderMyOrders() {
   let content = '';
 
   if (myOrdersData === null && !myOrdersLoading) {
-    // Show phone/PIN form to look up orders
     content = `
       <div class="card" style="margin-top:16px">
         <h2 style="margin-bottom:16px">View Your Orders</h2>
@@ -574,23 +584,48 @@ function renderMyOrders() {
         return '<div class="bill-row" style="font-size:0.9rem"><span>' + it.name + '</span><span>' + it.qty + ' ' + it.unit + '</span></div>';
       }).join('');
 
-      const statusClass = order.paymentStatus === 'paid' ? 'status-paid' : 'status-unpaid';
-      const statusText = order.paymentStatus === 'paid' ? 'PAID' : 'PENDING';
+      const st = getStatusDisplay(order.paymentStatus);
+      const statusStyle = st.text === 'CANCELLED' ? 'background:#eee;color:#999' : '';
+      const isActionable = st.text === 'PENDING';
+      const oid = order.orderId;
+      const msg = myOrdersActionMsg[oid];
 
-      return '<div class="card" style="margin-top:12px">' +
+      let actionsHtml = '';
+      if (isActionable) {
+        actionsHtml = '' +
+          '<div style="border-top:1px solid var(--gray-border);padding-top:10px;margin-top:8px">' +
+            '<div style="display:flex;gap:8px;margin-bottom:8px">' +
+              '<button class="btn btn-green btn-sm" style="flex:1;font-size:0.85rem" onclick="togglePayForm(\'' + oid + '\')">&#9989; I have Paid</button>' +
+              '<button class="btn btn-red btn-sm" style="flex:1;font-size:0.85rem" onclick="cancelMyOrder(\'' + oid + '\')">&#10060; Cancel</button>' +
+            '</div>' +
+            '<div id="payform-' + oid + '" style="display:none">' +
+              '<input class="input" id="payref-' + oid + '" type="text" placeholder="UPI ref / transaction ID / note" style="font-size:0.9rem;margin-bottom:8px">' +
+              '<button class="btn btn-green btn-sm" style="width:100%;font-size:0.85rem" onclick="claimPayment(\'' + oid + '\')">Submit Payment Proof</button>' +
+            '</div>' +
+          '</div>';
+      }
+
+      let msgHtml = '';
+      if (msg) {
+        msgHtml = '<p style="margin-top:8px;padding:8px;border-radius:6px;text-align:center;font-size:0.85rem;' +
+          (msg.isError ? 'background:#ffeaea;color:#c00' : 'background:var(--green-light);color:var(--green)') + '">' + msg.text + '</p>';
+      }
+
+      return '<div class="card" style="margin-top:12px' + (st.text === 'CANCELLED' ? ';opacity:0.6' : '') + '">' +
         '<div class="flex items-center" style="justify-content:space-between;margin-bottom:8px">' +
-          '<strong>' + order.orderId + '</strong>' +
-          '<span class="status-badge ' + statusClass + '">' + statusText + '</span>' +
+          '<strong>' + oid + '</strong>' +
+          '<span class="status-badge ' + st.cls + '" style="' + statusStyle + '">' + st.text + '</span>' +
         '</div>' +
         '<p style="font-size:0.8rem;color:var(--gray);margin-bottom:8px">' + order.date + ' ' + order.time + '</p>' +
         '<div style="border-top:1px solid var(--gray-border);padding-top:8px">' + itemsList + '</div>' +
         '<div class="bill-row total"><span>Total</span><span>' + formatCurrency(Number(order.total)) + '</span></div>' +
+        actionsHtml + msgHtml +
       '</div>';
     }).join('');
 
     content += `
       <div style="margin-top:16px;text-align:center">
-        <button class="btn btn-white btn-sm" onclick="myOrdersData=null;myOrdersError='';render()">&#8592; Back</button>
+        <button class="btn btn-white btn-sm" onclick="myOrdersData=null;myOrdersError='';myOrdersActionMsg={};render()">&#8592; Back</button>
       </div>
     `;
   }
@@ -603,6 +638,65 @@ function renderMyOrders() {
   `;
 }
 
+function togglePayForm(orderId) {
+  const el = document.getElementById('payform-' + orderId);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function claimPayment(orderId) {
+  const noteEl = document.getElementById('payref-' + orderId);
+  const note = noteEl ? noteEl.value.trim() : '';
+  if (!CONFIG.SHEET_URL) return;
+
+  myOrdersActionMsg[orderId] = { text: 'Sending...', isError: false };
+  render();
+
+  fetch(CONFIG.SHEET_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      token: CONFIG.SHEET_TOKEN,
+      paymentClaim: { orderId: orderId, phone: myOrdersPhone, pin: myOrdersPin, note: note }
+    })
+  }).then(function() {
+    myOrdersActionMsg[orderId] = { text: 'Payment claim sent! Vendor will confirm.', isError: false };
+    // Update local data to reflect the change
+    const order = myOrdersData.find(function(o) { return o.orderId === orderId; });
+    if (order) order.paymentStatus = 'claimed';
+    render();
+  }).catch(function() {
+    myOrdersActionMsg[orderId] = { text: 'Could not reach server.', isError: true };
+    render();
+  });
+}
+
+function cancelMyOrder(orderId) {
+  if (!confirm('Cancel this order? This cannot be undone.')) return;
+  if (!CONFIG.SHEET_URL) return;
+
+  myOrdersActionMsg[orderId] = { text: 'Cancelling...', isError: false };
+  render();
+
+  fetch(CONFIG.SHEET_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      token: CONFIG.SHEET_TOKEN,
+      cancelOrder: { orderId: orderId, phone: myOrdersPhone, pin: myOrdersPin }
+    })
+  }).then(function() {
+    myOrdersActionMsg[orderId] = { text: 'Order cancelled.', isError: false };
+    const order = myOrdersData.find(function(o) { return o.orderId === orderId; });
+    if (order) order.paymentStatus = 'cancelled';
+    render();
+  }).catch(function() {
+    myOrdersActionMsg[orderId] = { text: 'Could not reach server.', isError: true };
+    render();
+  });
+}
+
 function fetchMyOrders() {
   const phone = document.getElementById('myOrdersPhone').value.trim();
   const pin = document.getElementById('myOrdersPin').value.trim();
@@ -612,8 +706,11 @@ function fetchMyOrders() {
   if (!CONFIG.SHEET_URL) { myOrdersError = 'Sheet not configured. Contact vendor.'; render(); return; }
 
   customerPhone = phone;
+  myOrdersPhone = phone;
+  myOrdersPin = pin;
   myOrdersLoading = true;
   myOrdersError = '';
+  myOrdersActionMsg = {};
   render();
 
   const url = CONFIG.SHEET_URL + '?token=' + encodeURIComponent(CONFIG.SHEET_TOKEN) + '&phone=' + encodeURIComponent(phone) + '&pin=' + encodeURIComponent(pin);

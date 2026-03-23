@@ -129,7 +129,7 @@ select.input{appearance:auto}
 // Set these ONCE before sharing the file with customers.
 // These are embedded in the file and used by all customers.
 const CONFIG = {
-  SHEET_URL: 'https://script.google.com/macros/s/AKfycbwED_xZnny6FCCvMCjLvdSEP7rIyPwttQQmv0pITPXO_zX0Mq38jss_o5RGoAqwh2Sr/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
+  SHEET_URL: 'https://script.google.com/macros/s/AKfycbxoxtQe12rS3XW3qAge9_dL_gHW3IchDBFD3UCWI0KEQJpfovEnJHWRhO3V38Yabrg/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
   SHEET_TOKEN: 'mango2026',       // Must match SECRET_TOKEN in your Apps Script, e.g. 'mango2026'
   VENDOR_NAME: 'Fresh Veggie Farm',
   VENDOR_PHONE: '',      // With country code, e.g. '919876543210'
@@ -149,7 +149,7 @@ const DEFAULT_SETTINGS = {
   vendorName: CONFIG.VENDOR_NAME,
   vendorPhone: CONFIG.VENDOR_PHONE,
   upiId: CONFIG.UPI_ID,
-  pin: '6546',
+  pin: '1234',
   welcomeMessage: CONFIG.WELCOME_MSG,
   sheetUrl: CONFIG.SHEET_URL,
   sheetToken: CONFIG.SHEET_TOKEN
@@ -1217,6 +1217,7 @@ function saveMenuItem(existingId) {
     menu.push({id: newId, name, price, unit, available, category});
   }
   persist();
+  pushMenuToSheet();
   editingItem = null;
   currentPage = 'admin';
   adminTab = 'menu';
@@ -1227,6 +1228,7 @@ function deleteMenuItem(id) {
   if (confirm('Remove this item from the menu?')) {
     menu = menu.filter(m => m.id !== id);
     persist();
+    pushMenuToSheet();
     render();
   }
 }
@@ -1282,7 +1284,7 @@ function importData(event) {
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      if (data.menu) { menu = data.menu; saveData(STORAGE_KEYS.menu, menu); }
+      if (data.menu) { menu = data.menu; saveData(STORAGE_KEYS.menu, menu); pushMenuToSheet(); }
       if (data.orders) { orders = data.orders; saveData(STORAGE_KEYS.orders, orders); }
       if (data.settings) { settings = {...DEFAULT_SETTINGS, ...data.settings}; saveData(STORAGE_KEYS.settings, settings); }
       alert('Data imported successfully!');
@@ -1405,8 +1407,38 @@ function attachEventListeners() {
   }
 }
 
+// ============ MENU SYNC WITH SHEET ============
+
+function fetchMenuFromSheet() {
+  if (!CONFIG.SHEET_URL) return;
+  const url = CONFIG.SHEET_URL + '?token=' + encodeURIComponent(CONFIG.SHEET_TOKEN) + '&action=menu';
+  fetch(url)
+    .then(function(resp) { return resp.json(); })
+    .then(function(data) {
+      if (data.status === 'success' && data.menu && data.menu.length > 0) {
+        menu = data.menu;
+        saveData(STORAGE_KEYS.menu, menu);
+        render();
+      }
+    })
+    .catch(function() {
+      // Offline or error — keep localStorage menu
+    });
+}
+
+function pushMenuToSheet() {
+  if (!CONFIG.SHEET_URL) return;
+  fetch(CONFIG.SHEET_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ token: CONFIG.SHEET_TOKEN, saveMenu: { items: menu } })
+  }).catch(function() {});
+}
+
 // ============ INIT ============
 render();
+fetchMenuFromSheet();
 </script>
 </body>
 </html>

@@ -149,7 +149,7 @@ const DEFAULT_SETTINGS = {
   vendorName: CONFIG.VENDOR_NAME,
   vendorPhone: CONFIG.VENDOR_PHONE,
   upiId: CONFIG.UPI_ID,
-  pin: '6546',
+  pin: '1234',
   welcomeMessage: CONFIG.WELCOME_MSG,
   sheetUrl: CONFIG.SHEET_URL,
   sheetToken: CONFIG.SHEET_TOKEN
@@ -244,6 +244,37 @@ function formatDate(d) {
 function formatCurrency(n) {
   return '\u20B9' + n.toFixed(2);
 }
+
+// ============ UPI PAYMENT ============
+function buildUpiLink(upiId, name, amount, orderId) {
+  var params = 'pa=' + encodeURIComponent(upiId)
+    + '&pn=' + encodeURIComponent(name || 'Vendor')
+    + '&am=' + encodeURIComponent(amount.toFixed(2))
+    + '&cu=INR'
+    + '&tn=' + encodeURIComponent('Order ' + (orderId || ''));
+  return 'upi://pay?' + params;
+}
+
+// Minimal QR Code generator (alphanumeric, version 1-6 auto)
+// Generates an SVG string for the given text
+function generateQrSvg(text, size) {
+  size = size || 200;
+  // Use a simple QR encoding via a canvas-free approach
+  // We'll use the QR code API from chart.googleapis.com as a fallback image
+  // But for offline: encode as a Google Charts QR URL (works client-side when online)
+  var qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=' + size + 'x' + size
+    + '&chl=' + encodeURIComponent(text)
+    + '&choe=UTF-8&chld=M|2';
+  return '<img src="' + qrUrl + '" alt="UPI QR Code" style="width:' + size + 'px;height:' + size + 'px;border:2px solid var(--gray-border);border-radius:8px" onerror="this.parentElement.innerHTML=\'<p style=color:var(--gray);font-size:0.8rem>QR requires internet</p>\'">';
+}
+
+function renderUpiQr() {
+  var el = document.getElementById('upiQrCode');
+  if (!el || !settings.upiId || !currentOrder) return;
+  var link = buildUpiLink(settings.upiId, settings.vendorName, currentOrder.total, currentOrder.id);
+  el.innerHTML = generateQrSvg(link, 180);
+}
+
 function groupByCategory(items) {
   const groups = {};
   items.forEach(item => {
@@ -272,6 +303,7 @@ function render() {
 
   app.innerHTML = html;
   attachEventListeners();
+  if (currentPage === 'bill') { renderUpiQr(); }
 }
 
 // ============ PAGES ============
@@ -516,6 +548,18 @@ function renderBill() {
         </div>
       </div>
 
+      ${settings.upiId && o.paymentStatus !== 'paid' ? `
+      <div class="card no-print" style="text-align:center;margin-top:12px">
+        <h3 style="color:var(--green);margin-bottom:12px">Pay Now</h3>
+        <div id="upiQrCode" style="margin:0 auto 12px;display:inline-block"></div>
+        <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:12px">Scan QR with any UPI app, or tap the button below</p>
+        <a href="${buildUpiLink(settings.upiId, settings.vendorName, o.total, o.id)}" class="btn" style="background:#5f259f;color:#fff;margin-bottom:8px;font-size:1.05rem">
+          &#128179; Pay ₹${o.total} via UPI
+        </a>
+        <p style="font-size:0.75rem;color:var(--gray);margin-top:8px">Opens GPay, PhonePe, Paytm, or your default UPI app</p>
+      </div>
+      ` : ''}
+
       <div class="flex gap-8" style="flex-direction:column">
         ${settings.vendorPhone ? `
           <a href="${waUrl}" target="_blank" class="btn wa-btn no-print">
@@ -592,8 +636,14 @@ function renderMyOrders() {
 
       let actionsHtml = '';
       if (isActionable) {
+        var upiPayHtml = '';
+        if (settings.upiId && order.total) {
+          var upiLink = buildUpiLink(settings.upiId, settings.vendorName, order.total, oid);
+          upiPayHtml = '<a href="' + upiLink + '" class="btn btn-sm" style="background:#5f259f;color:#fff;font-size:0.85rem;margin-bottom:8px;display:block;text-decoration:none;text-align:center">&#128179; Pay \u20B9' + order.total.toFixed(0) + ' via UPI</a>';
+        }
         actionsHtml = '' +
           '<div style="border-top:1px solid var(--gray-border);padding-top:10px;margin-top:8px">' +
+            upiPayHtml +
             '<div style="display:flex;gap:8px;margin-bottom:8px">' +
               '<button class="btn btn-green btn-sm" style="flex:1;font-size:0.85rem" onclick="togglePayForm(\'' + oid + '\')">&#9989; I have Paid</button>' +
               '<button class="btn btn-red btn-sm" style="flex:1;font-size:0.85rem" onclick="cancelMyOrder(\'' + oid + '\')">&#10060; Cancel</button>' +

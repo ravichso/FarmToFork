@@ -132,8 +132,8 @@ const CONFIG = {
   SHEET_URL: 'https://script.google.com/macros/s/AKfycbx1CAlYBf_JmKjQxbV5H_2eu27eG8PSM0EMPcWheWdlLVANUAvA4RFR8ARSByOFDP71/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
   SHEET_TOKEN: 'mango2026',       // Must match SECRET_TOKEN in your Apps Script, e.g. 'mango2026'
   VENDOR_NAME: 'Fresh Veggie Farm',
-  VENDOR_PHONE: '',      // With country code, e.g. '919876543210'
-  UPI_ID: '',            // e.g. 'name@upi'
+  VENDOR_PHONE: '9892515063',      // With country code, e.g. '919876543210'
+  UPI_ID: 'AnilAdan@upi',            // e.g. 'name@upi'
   WELCOME_MSG: 'Welcome! Order fresh vegetables for the week.',
   ADMIN_ENABLED: true   // Set to true ONLY on YOUR copy. Customers get false.
 };
@@ -185,7 +185,23 @@ function saveData(key, data) {
 
 let menu = loadData(STORAGE_KEYS.menu, DEFAULT_MENU);
 let orders = loadData(STORAGE_KEYS.orders, []);
-let settings = loadData(STORAGE_KEYS.settings, DEFAULT_SETTINGS);
+// Merge saved settings with defaults so new CONFIG values (like UPI_ID) take effect
+// even if the user already has old settings in localStorage.
+// CONFIG values override saved values when CONFIG is non-empty.
+let settings = (function() {
+  var saved = loadData(STORAGE_KEYS.settings, DEFAULT_SETTINGS);
+  var merged = {};
+  for (var k in DEFAULT_SETTINGS) { merged[k] = DEFAULT_SETTINGS[k]; }
+  for (var k in saved) { if (saved[k] !== undefined && saved[k] !== '') merged[k] = saved[k]; }
+  // Always prefer CONFIG values when they are explicitly set (non-empty)
+  if (CONFIG.VENDOR_NAME) merged.vendorName = CONFIG.VENDOR_NAME;
+  if (CONFIG.VENDOR_PHONE) merged.vendorPhone = CONFIG.VENDOR_PHONE;
+  if (CONFIG.UPI_ID) merged.upiId = CONFIG.UPI_ID;
+  if (CONFIG.SHEET_URL) merged.sheetUrl = CONFIG.SHEET_URL;
+  if (CONFIG.SHEET_TOKEN) merged.sheetToken = CONFIG.SHEET_TOKEN;
+  if (CONFIG.WELCOME_MSG) merged.welcomeMessage = CONFIG.WELCOME_MSG;
+  return merged;
+})();
 
 function persist() {
   saveData(STORAGE_KEYS.menu, menu);

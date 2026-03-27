@@ -132,11 +132,11 @@ select.input{appearance:auto}
 // Set these ONCE before sharing the file with customers.
 // These are embedded in the file and used by all customers.
 const CONFIG = {
-  SHEET_URL: 'https://script.google.com/macros/s/AKfycbzPnhIVysH08S4kgDUXwg8IJi7ob5pT03bIKgyb-JDXkF8Yt97B0dmshVuV4aZchH-i/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
+  SHEET_URL: 'https://script.google.com/macros/s/AKfycbxzY9SkKiQcjy7LoPxE63X_asLJVFCMsVK8A2guBhhZN7Q4KNoTCTsFIPdaKwE5UVCX/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
   SHEET_TOKEN: 'mango2026',       // Must match SECRET_TOKEN in your Apps Script, e.g. 'mango2026'
   VENDOR_NAME: 'Fresh Veggie Farm',
-  VENDOR_PHONE: '9773088004',      // With country code, e.g. '919876543210'
-  UPI_ID: 'DummyUPId@UPI',            // e.g. 'name@upi'
+  VENDOR_PHONE: '',      // With country code, e.g. '919876543210'
+  UPI_ID: '',            // e.g. 'name@upi'
   WELCOME_MSG: 'Welcome! Order fresh vegetables for the week.',
   ADMIN_ENABLED: false   // Set to true ONLY on YOUR copy. Customers get false.
 };
@@ -856,21 +856,41 @@ function sendPinChange() {
 
   if (!CONFIG.SHEET_URL) { showMsg('Sheet not configured. Contact vendor.', true); return; }
 
-  showMsg('Updating PIN...', false);
+  showMsg('Verifying your current PIN...', false);
 
-  fetch(CONFIG.SHEET_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      token: CONFIG.SHEET_TOKEN,
-      pinChange: { phone: phone, oldPin: oldPin, newPin: newPin }
+  // Step 1: Verify old phone+PIN via GET (readable response)
+  var verifyUrl = CONFIG.SHEET_URL
+    + '?token=' + encodeURIComponent(CONFIG.SHEET_TOKEN)
+    + '&action=verify'
+    + '&phone=' + encodeURIComponent(phone)
+    + '&pin=' + encodeURIComponent(oldPin);
+
+  fetch(verifyUrl)
+    .then(function(resp) { return resp.json(); })
+    .then(function(data) {
+      if (data.status !== 'success') {
+        showMsg('PIN change failed: ' + (data.message || 'Verification failed. Check your phone number and current PIN.'), true);
+        return;
+      }
+      // Step 2: Verified — now send the actual PIN change via POST
+      showMsg('Updating PIN...', false);
+      fetch(CONFIG.SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          token: CONFIG.SHEET_TOKEN,
+          pinChange: { phone: phone, oldPin: oldPin, newPin: newPin }
+        })
+      }).then(function() {
+        showMsg('PIN changed successfully! Your new PIN is now active.', false);
+      }).catch(function() {
+        showMsg('Could not reach server. Check your connection.', true);
+      });
     })
-  }).then(function() {
-    showMsg('PIN change request sent! If your old PIN was correct, the new PIN is now active.', false);
-  }).catch(function() {
-    showMsg('Could not reach server. Check your connection.', true);
-  });
+    .catch(function() {
+      showMsg('Could not reach server. Check your connection.', true);
+    });
 }
 
 // ============ ADMIN PAGES ============
@@ -1209,6 +1229,43 @@ function submitOrder() {
   customerName = name;
   customerPhone = phone;
 
+  // If Sheet is configured, verify phone+PIN before placing order
+  if (CONFIG.SHEET_URL) {
+    // Disable confirm button to prevent double-tap
+    var confirmBtn = document.querySelector('.bottom-nav .btn');
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Verifying...'; }
+
+    var verifyUrl = CONFIG.SHEET_URL
+      + '?token=' + encodeURIComponent(CONFIG.SHEET_TOKEN)
+      + '&action=verify'
+      + '&phone=' + encodeURIComponent(phone)
+      + '&pin=' + encodeURIComponent(pin);
+
+    fetch(verifyUrl)
+      .then(function(resp) { return resp.json(); })
+      .then(function(data) {
+        if (data.status === 'success') {
+          placeOrderAfterVerify(name, phone, pin);
+        } else {
+          alert('Order failed: ' + (data.message || 'Verification failed. Please check your phone number and PIN.'));
+          if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = '&#9989; Confirm Order'; }
+        }
+      })
+      .catch(function() {
+        // Network error — let the customer decide
+        if (confirm('Could not verify your details (no internet?). Place order anyway? It will be saved locally.')) {
+          placeOrderAfterVerify(name, phone, pin);
+        } else {
+          if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = '&#9989; Confirm Order'; }
+        }
+      });
+  } else {
+    // No Sheet configured — place order directly (offline mode)
+    placeOrderAfterVerify(name, phone, pin);
+  }
+}
+
+function placeOrderAfterVerify(name, phone, pin) {
   const items = getCartItems();
   const order = {
     id: generateOrderId(),

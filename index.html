@@ -132,11 +132,11 @@ select.input{appearance:auto}
 // Set these ONCE before sharing the file with customers.
 // These are embedded in the file and used by all customers.
 const CONFIG = {
-  SHEET_URL: 'https://script.google.com/macros/s/AKfycbxzY9SkKiQcjy7LoPxE63X_asLJVFCMsVK8A2guBhhZN7Q4KNoTCTsFIPdaKwE5UVCX/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
+  SHEET_URL: 'https://script.google.com/macros/s/AKfycbx3-guwsRbJS8JoapdnjJD0oLISMbnDuKTt-pbYgpNKZ0vNtjFnrmZKAoyEU3rYVLXV/exec',         // Your Google Apps Script URL, e.g. 'https://script.google.com/macros/s/.../exec'
   SHEET_TOKEN: 'mango2026',       // Must match SECRET_TOKEN in your Apps Script, e.g. 'mango2026'
   VENDOR_NAME: 'Fresh Veggie Farm',
-  VENDOR_PHONE: '',      // With country code, e.g. '919876543210'
-  UPI_ID: '',            // e.g. 'name@upi'
+  VENDOR_PHONE: '9773088004',      // With country code, e.g. '919876543210'
+  UPI_ID: 'nsubhash69@okaxis',            // e.g. 'name@upi'
   WELCOME_MSG: 'Welcome! Order fresh vegetables for the week.',
   ADMIN_ENABLED: false   // Set to true ONLY on YOUR copy. Customers get false.
 };
@@ -265,13 +265,46 @@ function formatCurrency(n) {
 }
 
 // ============ UPI PAYMENT ============
-function buildUpiLink(upiId, name, amount, orderId) {
-  var params = 'pa=' + encodeURIComponent(upiId)
+
+// App-specific UPI deep link schemes
+var UPI_APPS = [
+  { id: 'gpay',    name: 'Google Pay', scheme: 'tez://upi/pay?',     color: '#2DA94F', icon: '&#9679;' },
+  { id: 'phonepe', name: 'PhonePe',    scheme: 'phonepe://pay?',     color: '#5f259f', icon: '&#9679;' },
+  { id: 'paytm',   name: 'Paytm',      scheme: 'paytm://upi/pay?',  color: '#00BAF2', icon: '&#9679;' }
+];
+
+function buildUpiParams(upiId, name, amount, orderId) {
+  return 'pa=' + encodeURIComponent(upiId)
     + '&pn=' + encodeURIComponent(name || 'Vendor')
     + '&am=' + encodeURIComponent(amount.toFixed(2))
     + '&cu=INR'
     + '&tn=' + encodeURIComponent('Order ' + (orderId || ''));
-  return 'upi://pay?' + params;
+}
+
+function buildUpiLink(upiId, name, amount, orderId) {
+  return 'upi://pay?' + buildUpiParams(upiId, name, amount, orderId);
+}
+
+function buildAppUpiLink(app, upiId, name, amount, orderId) {
+  return app.scheme + buildUpiParams(upiId, name, amount, orderId);
+}
+
+function renderUpiAppButtons(upiId, vendorName, amount, orderId) {
+  var params = buildUpiParams(upiId, vendorName, amount, orderId);
+  var html = '<div style="display:flex;flex-direction:column;gap:8px">';
+  for (var i = 0; i < UPI_APPS.length; i++) {
+    var app = UPI_APPS[i];
+    var link = app.scheme + params;
+    html += '<a href="' + link + '" class="btn btn-sm" style="background:' + app.color
+      + ';color:#fff;text-decoration:none;text-align:center;font-size:0.95rem;min-height:48px">'
+      + '&#128179; Pay via ' + app.name + '</a>';
+  }
+  // Generic fallback for other UPI apps
+  var genericLink = 'upi://pay?' + params;
+  html += '<a href="' + genericLink + '" class="btn btn-sm" style="background:#666;color:#fff;text-decoration:none;text-align:center;font-size:0.85rem;min-height:44px">'
+    + 'Other UPI App</a>';
+  html += '</div>';
+  return html;
 }
 
 // Minimal QR Code generator (alphanumeric, version 1-6 auto)
@@ -569,13 +602,10 @@ function renderBill() {
 
       ${settings.upiId && o.paymentStatus !== 'paid' ? `
       <div class="card no-print" style="text-align:center;margin-top:12px">
-        <h3 style="color:var(--green);margin-bottom:12px">Pay Now</h3>
+        <h3 style="color:var(--green);margin-bottom:12px">Pay ₹${o.total.toFixed(0)}</h3>
         <div id="upiQrCode" style="margin:0 auto 12px;display:inline-block"></div>
-        <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:12px">Scan QR with any UPI app, or tap the button below</p>
-        <a href="${buildUpiLink(settings.upiId, settings.vendorName, o.total, o.id)}" class="btn" style="background:#5f259f;color:#fff;margin-bottom:8px;font-size:1.05rem">
-          &#128179; Pay ₹${o.total} via UPI
-        </a>
-        <p style="font-size:0.75rem;color:var(--gray);margin-top:8px">Opens GPay, PhonePe, Paytm, or your default UPI app</p>
+        <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:12px">Scan QR with any UPI app, or tap your app below</p>
+        ${renderUpiAppButtons(settings.upiId, settings.vendorName, o.total, o.id)}
       </div>
       ` : ''}
 
@@ -657,8 +687,7 @@ function renderMyOrders() {
       if (isActionable) {
         var upiPayHtml = '';
         if (settings.upiId && order.total) {
-          var upiLink = buildUpiLink(settings.upiId, settings.vendorName, order.total, oid);
-          upiPayHtml = '<a href="' + upiLink + '" class="btn btn-sm" style="background:#5f259f;color:#fff;font-size:0.85rem;margin-bottom:8px;display:block;text-decoration:none;text-align:center">&#128179; Pay \u20B9' + order.total.toFixed(0) + ' via UPI</a>';
+          upiPayHtml = '<div style="margin-bottom:10px">' + renderUpiAppButtons(settings.upiId, settings.vendorName, order.total, oid) + '</div>';
         }
         actionsHtml = '' +
           '<div style="border-top:1px solid var(--gray-border);padding-top:10px;margin-top:8px">' +
